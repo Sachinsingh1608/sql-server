@@ -1,0 +1,54 @@
+24/05
+select * from Employee where salary > (
+select sum(salary)/count(*) from Employee)
+
+SELECT 
+    Dept_Name ,avg(E.salary)
+FROM 
+    Dept D
+JOIN 
+    Employee E 
+ON 
+    D.Dept_id = E.dept_id
+GROUP BY 
+    D.Dept_Name
+HAVING 
+    AVG(E.salary) < (
+        SELECT 
+            AVG(E1.salary)
+        FROM 
+            Employee E1
+    );
+
+SELECT * FROM EMPLOYEE A JOIN (SELECT DEPT_ID,AVG(SALARY) AS 'AvgSalary' from Employee group by dept_id) b
+on A.dept_id = b.dept_id
+where a.salary > b.AvgSalary
+
+
+EMP NAME ID SALAR DEPT NAME > 3 EMPLYE HONE CHIYE
+
+SELECT * FROM EMPLOYEE A JOIN (SELECT D AS 'AvgSalary' from Employee group by dept_id) b
+on A.dept_id = b.dept_id
+where a.salary > b.AvgSalary
+
+select concat(e.first_name,' ',e.last_name) as 'full Name',e.dept_id,e.salary,d.Dept_Name from Employee E join dept d
+on d.dept_id = e.dept_id
+where e.dept_id in
+(select dept_id from Employee group by dept_id having count(dept_id)>2) order by e.dept_id
+
+
+select first_name,last_name from employee order by  len(first_name) desc
+SELECT 
+    d.Dept_Name,e.salary,e.first_name,e.last_name
+FROM 
+    Dept D
+JOIN 
+    Employee E 
+ON 
+    D.Dept_id = E.dept_id
+GROUP BY 
+    E.Dept_id,e.first_name,e.last_name,D.Dept_id
+HAVING 
+ count(e.dept_id)>3
+
+
