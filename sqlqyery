@@ -52,3 +52,159 @@ HAVING
  count(e.dept_id)>3
 
 
+06/07/24
+
+
+
+
+CREATE PROCEDURE [dbo].[AssignClassRoom1](
+    @classSize INT,
+    @finalFees INT,
+    @feesLowerLimit INT)
+AS
+BEGIN
+    DECLARE @lsFormNo VARCHAR(6)
+    DECLARE @lsName VARCHAR(30)
+    DECLARE @lnMaths1 FLOAT
+    DECLARE @lnScience FLOAT
+    DECLARE @lnMaths2 FLOAT
+    DECLARE @lnPhy FLOAT
+    DECLARE @lnChemistry FLOAT
+    DECLARE @lnAvgScore FLOAT
+    DECLARE @lsCaste VARCHAR(10)
+    DECLARE @classroom VARCHAR(4) = 'C001'
+    DECLARE @studentCount INT = 0
+    DECLARE @rollno VARCHAR(4)
+	DECLARE @lnAmount int
+
+
+    DECLARE @StudentScores TABLE (
+        FormNo VARCHAR(6),
+        Name VARCHAR(30),
+        AvgScore FLOAT,
+		Fees  int
+    )
+-- ASSIGN VALUE WITH FORMNO,NAME,AVGSCORE,FEES
+
+INSERT INTO @StudentScores (FormNo, Name, AvgScore, Fees)
+SELECT 
+    A.FormNo, 
+    A.Name,
+    CASE
+        WHEN ISNULL(A.Maths1, 0) = 0 THEN ISNULL(A.Maths2, 0) + ISNULL(A.Phy, 0) + ISNULL(A.Chem, 0)
+        ELSE ISNULL(A.Maths1, 0) + ISNULL(A.Science, 0)
+    END AS AvgScore,
+    SUM(B.Amount) AS Fees
+FROM 
+    Studentmaster A
+INNER JOIN 
+
+    FeesReceipt B ON A.FormNo = B.FormNo
+GROUP BY 
+    A.FormNo, 
+    A.Name,
+    A.Maths1,
+    A.Maths2,
+    A.Phy,
+    A.Chem,
+    A.Science;
+
+
+--FETCH VALUE DESC ORDER BY AVG SCORE
+
+    DECLARE ClASSROOM_CURSOR1 CURSOR FOR
+    SELECT FormNo, Name, AvgScore,Fees
+    FROM @StudentScores
+    ORDER BY AvgScore DESC
+
+    SET NOCOUNT ON
+    OPEN ClASSROOM_CURSOR1
+
+    FETCH NEXT FROM ClASSROOM_CURSOR1 INTO @lsFormNo, @lsName, @lnAvgScore,@lnAmount
+
+    WHILE (@@FETCH_STATUS = 0)
+    BEGIN
+     --TRICKY PART
+        SET @rollno = 'R' + RIGHT('000' + CAST(@studentCount + 1 AS VARCHAR(3)), 3)
+		
+		 IF(@finalFees <= @lnAmount)
+		BEGIN
+		 INSERT INTO ClassRoomFinal (rollno, classroom, formno, score)
+        VALUES (@rollno, @classroom, @lsFormNo, @lnAvgScore)
+		 PRINT 'Roll No: ' + @rollno + ', Classroom: ' + @classroom + ', Form No: ' + 
+		 @lsFormNo + ', Avg Score: ' + CAST(@lnAvgScore AS VARCHAR(10)) + ', Fees: ' + CAST(@lnAmount AS VARCHAR(10)) + ' - Class Alotted'
+		      SET @studentCount = @studentCount + 1
+			 INSERT INTO StudentMessage(FORMNO,MSG)
+			 VALUES(@lsFormNo,'CLASS ALOTTED')
+		 END
+
+
+		  ELSE IF(@feesLowerLimit>@lnAmount)
+		 BEGIN
+		  PRINT 
+		' - Class Not Alotted' + ' Form No: ' +
+		 @lsFormNo 
+		  INSERT INTO StudentMessage(FORMNO,MSG)
+			 VALUES(@lsFormNo,'CLASS NOT ALOTTED')
+		 END
+
+		ELSE IF(@feesLowerLimit<@lnAmount) and (@finalFees > @lnAmount)
+		begin
+        INSERT INTO ClassRoomFinal (rollno, classroom, formno, score)
+        VALUES (@rollno, @classroom, @lsFormNo, @lnAvgScore)
+		 PRINT 'Roll No: ' + @rollno + ', Classroom: ' + @classroom + ', Form No: ' + @lsFormNo +
+		 ', Avg Score: ' + CAST(@lnAvgScore AS VARCHAR(10)) + ', Fees: ' + CAST(@lnAmount AS VARCHAR(10)) + ' - Class Alotted BUT FEES PENDING'
+		  INSERT INTO StudentMessage(FORMNO,MSG)
+			 VALUES(@lsFormNo,'Class Alotted BUT FEES PENDING')
+		      SET @studentCount = @studentCount + 1
+		End
+
+
+
+		
+
+   
+
+     
+        IF @studentCount >= @classSize
+        BEGIN
+            SET @classroom = 'C' + RIGHT('000' + CAST(CAST(SUBSTRING(@classroom, 2, 3) AS INT) + 1 AS VARCHAR(3)), 3)
+            SET @studentCount = 0
+        END
+
+        FETCH NEXT FROM ClASSROOM_CURSOR1 INTO @lsFormNo, @lsName, @lnAvgScore,@lnAmount
+    END
+
+    CLOSE ClASSROOM_CURSOR1
+    DEALLOCATE ClASSROOM_CURSOR1
+END
+GO
+
+
+--drop procedure AssignClassRoom1
+
+
+
+
+
+exec AssignClassRoom1 203,70000,69000
+select 'hello'
+drop table ClassRoomFinal
+    CREATE TABLE [dbo].[ClassRoomFinal] (
+        rollno varchar(4),
+        classroom varchar(4),
+        formno VARCHAR(6),
+        score FLOAT
+ 
+ )
+ DROP TABLE StudentMESSAGE
+ select * from ClassRoomFinal
+
+
+     CREATE TABLE [dbo].[StudentMessage] (
+        formno VARCHAR(6),
+		MSG varchar(50)
+  
+ )
+ 
+ SELECT B.Name,A.formno,A.MSG FROM StudentMessage A,StudentMaster B WHERE A.formno=B.FormNo ORDER BY A.formno
