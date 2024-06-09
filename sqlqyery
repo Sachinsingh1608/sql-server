@@ -208,3 +208,73 @@ drop table ClassRoomFinal
  )
  
  SELECT B.Name,A.formno,A.MSG FROM StudentMessage A,StudentMaster B WHERE A.formno=B.FormNo ORDER BY A.formno
+
+
+
+
+h/w 6/9/24
+CREATE PROCEDURE [dbo].[StudentMarks](
+    @examno varchar(4)
+)
+AS
+BEGIN
+    -- Declare a table variable to hold the scorecard data
+    DECLARE @Scorecard TABLE (
+        Name VARCHAR(50),
+        Parent_Name VARCHAR(50),
+        TotalMarks FLOAT
+    );
+
+    -- Insert data into SubjectMarks with the provided examno parameter
+    INSERT INTO SubjectMarks (FormNo, phy, chem, math, batch, examno)
+    SELECT
+        maths.[Form Number] AS formno,
+        phy.[Physics Marks] AS phy,
+        chemmarks.[Chem Marks] AS chem,
+        maths.[Maths Marks] AS math,
+        ClassRoomFinal.classroom as batch,
+        @examno AS examno
+    FROM maths
+    JOIN ChemMarks ON maths.[Form Number] = ChemMarks.[Form Number]
+    JOIN Phy ON Phy.[Form Number] = ChemMarks.[Form Number]
+    JOIN ClassRoomFinal ON ClassRoomFinal.formno = ChemMarks.[Form Number];
+
+    -- Insert into @Scorecard from calculated values in SubjectMarks
+    INSERT INTO ParentTable (StudentName, ParentName, TotalMarks)
+    SELECT
+        A.Name AS name,
+        A.ParentName AS Parent_Name,
+        (B.math + B.phy + B.chem) AS TotalMarks
+    FROM StudentMaster A
+    JOIN SubjectMarks B ON A.FormNo = B.FormNo
+    WHERE B.examno = @examno;
+
+
+
+
+    -- Optionally, return the result set from @Scorecard
+
+
+   
+END;
+
+--drop procedure StudentMarks
+
+create table SubjectMarks(
+formno varchar(6),
+phy int,
+chem int,
+math int,
+Batch varchar(4),
+ExamNo varchar(4)
+);
+
+select * from SubjectMarks
+create table ParentTable(
+StudentName varchar(50),
+ParentName varchar(50),
+TotalMarks FLOAT
+)
+DROP TABLE SubjectMarks
+DROP TABLE ParentTable
+select * from ParentTable
